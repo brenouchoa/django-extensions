@@ -145,10 +145,15 @@ Type 'yes' to continue, or 'no' to cancel: """ % (database_name,))
             connection = Database.connect(**conn_params)
             connection.set_isolation_level(0)  # autocommit false
             cursor = connection.cursor()
+            drop_sessions_query = """SELECT pg_terminate_backend(pg_stat_activity.pid) 
+                FROM pg_stat_activity 
+                WHERE pg_stat_activity.datname = '%s' 
+                AND pid <> pg_backend_pid();""" % database_name
             drop_query = "DROP DATABASE \"%s\";" % database_name
             logging.info('Executing... "' + drop_query + '"')
 
             try:
+                cursor.execute(drop_sessions_query)
                 cursor.execute(drop_query)
             except Database.ProgrammingError as e:
                 logging.exception("Error: %s" % str(e))
